@@ -1,24 +1,51 @@
 import Mathlib
 
 /-!
-# Insertion sort on labeled elements
-# labels to distinguish elements with duplicate values
+# Insertion sort
+# first arg to insertion sort "map" dictates what list is sorted on
 -/
+-- Guarantees total ordering, every two elements are comparable
+variable {α c : Type} [LinearOrder c]
+
+namespace Proj
+
+def orderedInsert (map : α -> c) (a : α) : List α -> List α
+  | [] => [a]
+  | b::rest => if (map a) ≤ (map b) then a::b::rest
+               else b::orderedInsert map a rest
+
+def insertionSort (map : α -> c) : List α -> List α
+  | [] => []
+  | a::rest => orderedInsert map a (insertionSort map rest)
+
+end Proj
+
+-- test case
+
+structure Student where
+  name : String
+  grade : ℕ
+  stID : ℕ
+
+def students : List Student :=
+[⟨"Teresa", 3, 3030⟩, ⟨"Sid", 3, 1010⟩, ⟨"Ria", 3, 2020⟩]
+
+-- sort by ID
+#eval List.map Student.name (Proj.insertionSort Student.stID students)
+
+-- sort by name
+#eval List.map Student.name (Proj.insertionSort Student.name students)
+
+-- sort by grade: every grade ties, output = input (order of elements should not change)
+#eval List.map Student.name (Proj.insertionSort Student.grade students)
+
+
+-- Merge Sort
+
 structure elem where
   key : ℕ
   label : String
 deriving Repr
-
-namespace Proj
-
-def orderedInsert (a : elem) : List elem -> List elem
-  | [] => [a]
-  | b::rest => if a.key ≤ b.key then a::b::rest
-               else b::orderedInsert a rest
-
-def insertionSort : List elem -> List elem
-  | [] => []
-  | a::rest => orderedInsert a (insertionSort rest)
 
 --split
 def split (l : List elem) : List elem × List elem :=
@@ -30,15 +57,10 @@ def merge : List elem -> List elem -> List elem
   | a::l, b::r => if a.key ≤ b.key then a::merge l (b::r)
                   else b::merge (a::l) r
 
-end Proj
 
-#eval Proj.insertionSort [⟨2, "a"⟩, ⟨1, "b"⟩, ⟨2, "c"⟩, ⟨1, "d"⟩]
-#eval Proj.insertionSort ([] : List elem)
+#eval split [⟨1, "a"⟩, ⟨2, "b"⟩]
+#eval split [⟨1, "a"⟩, ⟨2, "b"⟩, ⟨3, "c"⟩, ⟨4, "d"⟩, ⟨5, "e"⟩]
 
-
-#eval Proj.split [⟨1, "a"⟩, ⟨2, "b"⟩]
-#eval Proj.split [⟨1, "a"⟩, ⟨2, "b"⟩, ⟨3, "c"⟩, ⟨4, "d"⟩, ⟨5, "e"⟩]
-
-#eval Proj.merge [] [⟨1, "a"⟩]
-#eval Proj.merge [⟨1, "a"⟩] []
-#eval Proj.merge [⟨1, "a"⟩, ⟨4, "b"⟩] [⟨2, "c"⟩, ⟨3, "d"⟩]
+#eval merge [] [⟨1, "a"⟩]
+#eval merge [⟨1, "a"⟩] []
+#eval merge [⟨1, "a"⟩, ⟨4, "b"⟩] [⟨2, "c"⟩, ⟨3, "d"⟩]

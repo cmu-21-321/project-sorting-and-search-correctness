@@ -1,45 +1,5 @@
 import Mathlib
 
-/-!
-# Insertion sort
-# first arg to insertion sort "map" dictates what list is sorted on
--/
--- Guarantees total ordering, every two elements are comparable
-variable {α c : Type} [LinearOrder c]
-
-namespace Proj
-
-def orderedInsert (map : α -> c) (a : α) : List α -> List α
-  | [] => [a]
-  | b::rest => if (map a) ≤ (map b) then a::b::rest
-               else b::orderedInsert map a rest
-
-def insertionSort (map : α -> c) : List α -> List α
-  | [] => []
-  | a::rest => orderedInsert map a (insertionSort map rest)
-
-end Proj
-
--- test case
-
-structure Student where
-  name : String
-  grade : ℕ
-  stID : ℕ
-
-def students : List Student :=
-[⟨"Teresa", 3, 3030⟩, ⟨"Sid", 3, 1010⟩, ⟨"Ria", 3, 2020⟩]
-
--- sort by ID
-#eval List.map Student.name (Proj.insertionSort Student.stID students)
-
--- sort by name
-#eval List.map Student.name (Proj.insertionSort Student.name students)
-
--- sort by grade: every grade ties, output = input (order of elements should not change)
-#eval List.map Student.name (Proj.insertionSort Student.grade students)
-
-
 -- Merge Sort
 
 structure elem where

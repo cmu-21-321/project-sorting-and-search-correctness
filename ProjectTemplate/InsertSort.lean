@@ -1,0 +1,75 @@
+import Mathlib
+
+/-!
+# Insertion sort
+# first arg to insertion sort "map" dictates what list is sorted on
+-/
+-- Guarantees total ordering, every two elements are comparable
+variable {α c : Type} [LinearOrder c]
+
+-- namespace Proj
+
+def orderedInsert (map : α -> c) (a : α) : List α -> List α
+  | [] => [a]
+  | b::rest => if (map a) ≤ (map b) then a::b::rest
+               else b::orderedInsert map a rest
+
+def insertionSort (map : α -> c) : List α -> List α
+  | [] => []
+  | a::rest => orderedInsert map a (insertionSort map rest)
+
+-- end Proj
+
+-- test case
+
+structure Student where
+  name : String
+  grade : ℕ
+  stID : ℕ
+
+def students : List Student :=
+[⟨"Teresa", 3, 3030⟩, ⟨"Sid", 3, 1010⟩, ⟨"Ria", 3, 2020⟩]
+
+-- sort by ID
+#eval List.map Student.name (insertionSort Student.stID students)
+
+-- sort by name
+#eval List.map Student.name (insertionSort Student.name students)
+
+-- sort by grade: every grade ties, output = input (order of elements should not change)
+#eval List.map Student.name (insertionSort Student.grade students)
+
+
+-- proving trivial facts using sorting defns set up so far
+theorem exercise01 (f : α → c) (a : α) :
+    orderedInsert f a [] = [a] := by
+  rfl
+
+theorem exercise02 (f : α → c) (a b : α) (rest : List α) (h : f a ≤ f b) :
+    orderedInsert f a (b :: rest) = a :: b :: rest := by
+  rw [orderedInsert]
+  simp [h]
+
+theorem exercise03 (f : α → c) (a b : α) (rest : List α) (h : ¬ f a ≤ f b) :
+    orderedInsert f a (b :: rest) = b :: orderedInsert f a rest := by
+  rw [orderedInsert]
+  simp [h]
+
+theorem exercise04 (f : α → c) :
+    insertionSort f [] = [] := by
+  rfl
+
+theorem exercise05 (f : α → c) (a : α) (rest : List α) :
+    insertionSort f (a :: rest) = orderedInsert f a (insertionSort f rest) := by
+  rfl
+
+theorem exercise08 (f : α → c) (a : α) (l : List α) :
+    (orderedInsert f a l).Perm (a :: l) := by
+  induction l with
+  | nil =>
+    rw [exercise01]
+  | cons b rest ih =>
+    by_cases h : f a ≤ f b
+    · rw [exercise02 f a b rest h]
+    · rw [exercise03 f a b rest h]
+      exact (List.Perm.cons b ih).trans (List.Perm.swap a b rest)

@@ -17,6 +17,36 @@ def merge : List elem -> List elem -> List elem
   | a::l, b::r => if a.key ≤ b.key then a::merge l (b::r)
                   else b::merge (a::l) r
 
+def ElemSorted (l : List elem) : Prop :=
+  List.Pairwise (fun a b => a.key ≤ b.key) l
+
+theorem merge_empty_left (r : List elem) : merge [] r = r := by
+  rw [merge]
+
+theorem merge_cons_empty (a : elem) (l : List elem) : merge (a::l) [] = a::l := by
+  rw [merge]
+
+theorem merge_cons_cons (a b : elem) (l r : List elem) :
+    merge (a::l) (b::r) =
+      if a.key ≤ b.key then a :: merge l (b::r) else b :: merge (a::l) r := by
+  rw [merge]
+
+-- merge_perm: merge l r has exactly the same elts as l ++ r
+-- just possibly in a different order
+
+theorem merge_perm : ∀ (l r : List elem), (merge l r).Perm (l ++ r)
+  | [], r => by
+    rw [merge_empty_left, List.nil_append]
+  | a::l, [] => by
+    rw [merge_cons_empty, List.append_nil]
+  | a::l, b::r => by
+    by_cases h : a.key ≤ b.key
+    · rw [merge_cons_cons]
+      simp only [h, ↓reduceIte, List.cons_append]
+      exact List.Perm.cons a (merge_perm l (b::r))
+    · rw [merge_cons_cons]
+      simp only [h, ↓reduceIte]
+      exact (List.Perm.cons b (merge_perm (a::l) r)).trans List.perm_middle.symm
 
 #eval split [⟨1, "a"⟩, ⟨2, "b"⟩]
 #eval split [⟨1, "a"⟩, ⟨2, "b"⟩, ⟨3, "c"⟩, ⟨4, "d"⟩, ⟨5, "e"⟩]

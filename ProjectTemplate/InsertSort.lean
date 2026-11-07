@@ -20,6 +20,8 @@ def insertionSort (map : α -> c) : List α -> List α
 
 -- end Proj
 
+
+
 -- test case
 
 structure Student where
@@ -38,6 +40,29 @@ def students : List Student :=
 
 -- sort by grade: every grade ties, output = input (order of elements should not change)
 #eval List.map Student.name (insertionSort Student.grade students)
+
+
+
+-- correctness proofs
+def checkSorted (f : α → c) : List α → Bool
+  | [] => true
+  | [_] => true
+  | a :: b :: rest =>
+    if f a ≤ f b then checkSorted f (b :: rest)
+    else false
+
+#eval checkSorted Student.stID (insertionSort Student.stID students)
+-- should be true
+#eval checkSorted Student.stID students
+-- students has yet to be sorted, so should  be false
+#eval checkSorted Student.stID ([] : List Student)
+-- should be true
+
+-- precondition
+
+-- postcondition
+
+
 
 
 -- proving trivial facts using sorting defns set up so far
@@ -63,7 +88,7 @@ theorem exercise05 (f : α → c) (a : α) (rest : List α) :
     insertionSort f (a :: rest) = orderedInsert f a (insertionSort f rest) := by
   rfl
 
-theorem exercise08 (f : α → c) (a : α) (l : List α) :
+theorem orderedInsert_perm (f : α → c) (a : α) (l : List α) :
     (orderedInsert f a l).Perm (a :: l) := by
   induction l with
   | nil =>
@@ -73,3 +98,12 @@ theorem exercise08 (f : α → c) (a : α) (l : List α) :
     · rw [exercise02 f a b rest h]
     · rw [exercise03 f a b rest h]
       exact (List.Perm.cons b ih).trans (List.Perm.swap a b rest)
+
+theorem insertionSort_perm (f : α → c) (l : List α) :
+    (insertionSort f l).Perm l := by
+  induction l with
+  | nil =>
+    rw [exercise04]
+  | cons a rest ih =>
+    rw [exercise05]
+    exact (orderedInsert_perm f a (insertionSort f rest)).trans (List.Perm.cons a ih)

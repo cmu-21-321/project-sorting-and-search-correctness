@@ -9,6 +9,7 @@ variable {α c : Type} [LinearOrder c]
 
 -- namespace Proj
 
+
 def orderedInsert (map : α -> c) (a : α) : List α -> List α
   | [] => [a]
   | b::rest => if (map a) ≤ (map b) then a::b::rest
@@ -19,7 +20,6 @@ def insertionSort (map : α -> c) : List α -> List α
   | a::rest => orderedInsert map a (insertionSort map rest)
 
 -- end Proj
-
 
 
 -- test case
@@ -58,11 +58,20 @@ def checkSorted (f : α → c) : List α → Bool
 #eval checkSorted Student.stID ([] : List Student)
 -- should be true
 
--- precondition
+-- precondition and postcondition
 
--- postcondition
+-- precondition set up
+-- redundant with checkSorted, will determine which one to develop further next week
+inductive SortedBy (f : α → c) : List α → Prop
+  | nil : SortedBy f []
+  | single (x : α) : SortedBy f [x]
+  | cons (x y : α) (l : List α) :
+    f x ≤ f y → SortedBy f (y :: l) → SortedBy f (x :: y :: l)
 
-
+theorem orderedInsert_sorted (f : α → c) (a : α) (l : List α)
+    (h : SortedBy f l) :
+    SortedBy f (orderedInsert f a l) := by
+    sorry
 
 
 -- proving trivial facts using sorting defns set up so far

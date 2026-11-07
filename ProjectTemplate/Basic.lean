@@ -57,21 +57,24 @@ theorem merge_perm : ∀ (l r : List elem), (merge l r).Perm (l ++ r)
 #eval merge [⟨1, "a"⟩] []
 #eval merge [⟨1, "a"⟩, ⟨4, "b"⟩] [⟨2, "c"⟩, ⟨3, "d"⟩]
 
-
-inductive Sorted : List Nat → Prop
-  | nil : Sorted []
-  | single (x : Nat) : Sorted [x]
-  | cons (x y : Nat) (rest : List Nat) :
-      x ≤ y → Sorted (y :: rest) → Sorted (x :: y :: rest)
-
+bounds. -/
 def nth : List Nat → Nat → Option Nat
   | [], _ => none
   | x :: _, 0 => some x
   | _ :: xs, i + 1 => nth xs i
 
+/-- `x` occurs at some index of `l`. -/
 def Contains (l : List Nat) (x : Nat) : Prop := ∃ i, nth l i = some x
 
+theorem nth_lt_length (l : List Nat) (i v : Nat) :
+    nth l i = some v → i < l.length := by
+  fun_induction nth l i <;> simp_all
 
+theorem nth_of_lt_length (l : List Nat) (i : Nat) :
+    i < l.length → ∃ v, nth l i = some v := by
+  fun_induction nth l i <;> simp_all
+
+/-- Search for `target` in the half-open index range `[lo, hi)` of `l`. -/
 def bsearchGo (l : List Nat) (target : Nat) (lo hi : Nat) : Option Nat :=
   if _h : lo < hi then
     let mid := lo + (hi - lo) / 2
@@ -89,9 +92,9 @@ def bsearchGo (l : List Nat) (target : Nat) (lo hi : Nat) : Option Nat :=
 termination_by hi - lo
 decreasing_by all_goals omega
 
+/-- Binary search for `target` in `l`, returning an index at which it occurs. -/
 def binarySearch (l : List Nat) (target : Nat) : Option Nat :=
   bsearchGo l target 0 l.length
-
 
 #eval binarySearch [] 5
 #eval binarySearch [5] 5
@@ -100,17 +103,61 @@ def binarySearch (l : List Nat) (target : Nat) : Option Nat :=
 #eval binarySearch [1, 3, 5, 7, 9] 5
 #eval binarySearch [1, 2, 4, 8, 16, 32] 16
 
+/-! ### Soundness -/
 
 theorem bsearchGo_sound (l : List Nat) (target lo hi i : Nat) :
     bsearchGo l target lo hi = some i → nth l i = some target := by
-  sorry
+  fun_induction bsearchGo l target lo hi <;> intro h <;> simp_all <;> omega
 
 theorem binarySearch_sound (l : List Nat) (x i : Nat) :
-    binarySearch l x = some i → nth l i = some x := by
-  sorry
+    binarySearch l x = some i → nth l i = some x :=
+  bsearchGo_sound l x 0 l.length i
+
+/-! ### Completeness -/
+
+/-- In a sorted list, elements at smaller indices are no larger. -/
+theorem Sorted.nth_le_nth {l : List Nat} (hs : Sorted l) {i j a b : Nat} (hij : i ≤ j)
+    (ha : nth l i = some a) (hb : nth l j = some b) : a ≤ b := by
+  induction hs generalizing i j a b with
+  | nil => simp [nth] at ha
+  | single x => cases i <;> cases j <;> simp_all [nth]
+  | cons x y rest hxy _ ih =>
+    rcases i with _ | i <;> rcases j with _ | j
+    · simp_all [nth]
+    · simp only [nth, Option.some.injEq] at ha
+      exact ha ▸ Nat.le_trans hxy (ih (Nat.zero_le j) rfl hb)
+    · omega
+    · exact ih (Nat.le_of_succ_le_succ hij) ha hb
+
+/-- Loop invariant: if `target` lies in `[lo, hi)` of a sorted list, `bsearchGo` finds it. -/
+theorem bsearchGo_complete {l : List Nat} (hs : Sorted l) {target lo hi : Nat}
+    (hhi : hi ≤ l.length) (hx : ∃ j, lo ≤ j ∧ j < hi ∧ nth l j = some target) :
+    ∃ i, bsearchGo l target lo hi = some i := by
+  obtain ⟨j, hlo, hjhi, hj⟩ := hx
+  fun_induction bsearchGo l target lo hi with
+  | case1 lo hi _ mid hv =>
+    obtain ⟨v, hv'⟩ := nth_of_lt_length l mid (by omega)
+    simp [hv] at hv'
+  | case2 lo hi _ mid v hv hlt ih =>
+    exact ih (by omega) hlo
+      (Nat.lt_of_not_le fun hmj ↦ Nat.not_le.2 hlt (hs.nth_le_nth hmj hv hj))
+  | case3 lo hi _ mid v hv _ hlt ih =>
+    exact ih hhi (Nat.lt_of_not_le fun hjm ↦ Nat.not_le.2 hlt (hs.nth_le_nth hjm hj hv)) hjhi
+  | case4 => exact ⟨_, rfl⟩
+  | case5 => omega
 
 theorem binarySearch_complete (l : List Nat) (x : Nat) :
-    Sorted l → Contains l x → ∃ i, binarySearch l x = some i := by
-  sorry
+    Sorted l → Contains l x → ∃ i, binarySearch l x = some i := fun hs ⟨j, hj⟩ ↦
+  bsearchGo_complete hs (Nat.le_refl _) ⟨j, Nat.zero_le j, nth_lt_length l j x hj, hj⟩
 
-#min_imports
+/-! ### Absent targets -/
+
+theorem binarySearch_eq_none {l : List Nat} {x : Nat} (h : ¬Contains l x) :
+    binarySearch l x = none := by
+  cases hb : binarySearch l x with
+  | none => rfl
+  | some i => exact absurd ⟨i, binarySearch_sound l x i hb⟩ h
+
+theorem binarySearch_eq_none_iff {l : List Nat} {x : Nat} (hs : Sorted l) :
+    binarySearch l x = none ↔ ¬Contains l x :=
+  ⟨fun h hc ↦ by simpa [h] using binarySearch_complete l x hs hc, binarySearch_eq_none⟩

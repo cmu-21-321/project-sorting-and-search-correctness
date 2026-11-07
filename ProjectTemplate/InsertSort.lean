@@ -1,4 +1,5 @@
 import Mathlib
+import Mathlib.Order.Lattice
 
 /-!
 # Insertion sort
@@ -116,3 +117,5 @@ theorem insertionSort_perm (f : α → c) (l : List α) :
   | cons a rest ih =>
     rw [exercise05]
     exact (orderedInsert_perm f a (insertionSort f rest)).trans (List.Perm.cons a ih)
+
+#min_imports

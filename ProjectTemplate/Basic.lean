@@ -1,4 +1,6 @@
 import Mathlib
+import Mathlib.Algebra.Order.Ring.Nat
+import Mathlib.Order.SuccPred.Nat
 
 -- Merge Sort
 
@@ -110,3 +112,5 @@ theorem binarySearch_sound (l : List Nat) (x i : Nat) :
 theorem binarySearch_complete (l : List Nat) (x : Nat) :
     Sorted l → Contains l x → ∃ i, binarySearch l x = some i := by
   sorry
+
+#min_imports

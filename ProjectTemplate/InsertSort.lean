@@ -43,7 +43,6 @@ def students : List Student :=
 #eval List.map Student.name (insertionSort Student.grade students)
 
 
-
 -- correctness proofs
 def checkSorted (f : α → c) : List α → Bool
   | [] => true
@@ -68,12 +67,6 @@ inductive SortedBy (f : α → c) : List α → Prop
   | single (x : α) : SortedBy f [x]
   | cons (x y : α) (l : List α) :
     f x ≤ f y → SortedBy f (y :: l) → SortedBy f (x :: y :: l)
-
-theorem orderedInsert_sorted (f : α → c) (a : α) (l : List α)
-    (h : SortedBy f l) :
-    SortedBy f (orderedInsert f a l) := by
-    sorry
-
 
 -- proving trivial facts using sorting defns set up so far
 theorem exercise01 (f : α → c) (a : α) :
@@ -117,5 +110,43 @@ theorem insertionSort_perm (f : α → c) (l : List α) :
   | cons a rest ih =>
     rw [exercise05]
     exact (orderedInsert_perm f a (insertionSort f rest)).trans (List.Perm.cons a ih)
+
+
+theorem orderedInsert_sorted (f : α → c) (a : α) (l : List α)
+    (h : SortedBy f l) :
+    SortedBy f (orderedInsert f a l) := by
+      induction h with
+  | nil =>
+    rw [exercise01]
+    exact SortedBy.single a
+  | single x =>
+    by_cases h1 : f a ≤ f x
+    · rw [exercise02 f a x [] h1]
+      exact SortedBy.cons a x [] h1 (SortedBy.single x)
+    · rw [exercise03 f a x [] h1, exercise01]
+      exact SortedBy.cons x a [] (le_of_lt (not_le.mp h1)) (SortedBy.single a)
+  | cons x y l hxy hyl ih =>
+    by_cases h1 : f a ≤ f x
+    · rw [exercise02 f a x (y :: l) h1]
+      exact SortedBy.cons a x (y :: l) h1 (SortedBy.cons x y l hxy hyl)
+    · rw [exercise03 f a x (y :: l) h1]
+      by_cases h2 : f a ≤ f y
+      · rw [exercise02 f a y l h2]
+        exact SortedBy.cons x a (y :: l) (le_of_lt (not_le.mp h1))
+          (SortedBy.cons a y l h2 hyl)
+      · rw [exercise03 f a y l h2] at ih ⊢
+        exact SortedBy.cons x y _ hxy ih
+
+theorem insertionSort_sorted (f : α → c) (l : List α) :
+    SortedBy f (insertionSort f l) := by
+  induction l with
+  | nil =>
+    rw [exercise04]
+    exact SortedBy.nil
+  | cons a rest ih =>
+    rw [exercise05]
+    exact orderedInsert_sorted f a (insertionSort f rest) ih
+
+  -- stability next
 
 #min_imports

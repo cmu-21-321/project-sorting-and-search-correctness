@@ -8,7 +8,7 @@ import Mathlib.Order.SuccPred.Nat
 structure elem where
   key : ℕ
   label : String
-deriving Repr
+deriving Repr, DecidableEq
 
 --split
 def split (l : List elem) : List elem × List elem :=
@@ -57,6 +57,27 @@ theorem merge_perm : ∀ (l r : List elem), (merge l r).Perm (l ++ r)
 #eval merge [] [⟨1, "a"⟩]
 #eval merge [⟨1, "a"⟩] []
 #eval merge [⟨1, "a"⟩, ⟨4, "b"⟩] [⟨2, "c"⟩, ⟨3, "d"⟩]
+
+
+-- Stability spec and tests
+def withKey {Item Key : Type} [DecidableEq Key]
+    (key : Item → Key) (k : Key) (l : List Item) : List Item :=
+  l.filter (fun a => key a = k)
+
+def Stable {Item Key : Type} [DecidableEq Key]
+    (key : Item → Key) (input output : List Item) : Prop :=
+  ∀ k : Key, withKey key k output = withKey key k input
+
+def isStable {Item Key : Type} [DecidableEq Item] [DecidableEq Key]
+    (key : Item → Key) (input output : List Item) : Bool :=
+  let sameForKeyOf := fun x => withKey key (key x) output == withKey key (key x) input
+  input.all sameForKeyOf && output.all sameForKeyOf
+
+#eval isStable elem.key ([⟨1, "a"⟩, ⟨3, "c"⟩] ++ [⟨1, "b"⟩, ⟨2, "d"⟩])
+  (merge [⟨1, "a"⟩, ⟨3, "c"⟩] [⟨1, "b"⟩, ⟨2, "d"⟩])
+#eval isStable elem.key [⟨2, "a"⟩, ⟨1, "b"⟩, ⟨2, "c"⟩] [⟨1, "b"⟩, ⟨2, "c"⟩, ⟨2, "a"⟩]
+#eval isStable elem.key [⟨3, "a"⟩, ⟨1, "b"⟩, ⟨2, "c"⟩] [⟨1, "b"⟩, ⟨2, "c"⟩, ⟨3, "a"⟩]
+#eval isStable elem.key [⟨1, "a"⟩, ⟨1, "b"⟩] [⟨1, "a"⟩]
 
 inductive Sorted : List Nat → Prop
   | nil : Sorted []

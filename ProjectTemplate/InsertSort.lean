@@ -60,11 +60,8 @@ def checkSorted (f : α → c) : List α → Bool
 
 -- precondition set up
 -- redundant with checkSorted, will determine which one to develop further next week
-inductive SortedBy (f : α → c) : List α → Prop
-  | nil : SortedBy f []
-  | single (x : α) : SortedBy f [x]
-  | cons (x y : α) (l : List α) :
-    f x ≤ f y → SortedBy f (y :: l) → SortedBy f (x :: y :: l)
+def SortedBy (f : α → c) (l : List α) : Prop :=
+  List.Pairwise (fun x y => f x ≤ f y) l
 
 -- stress testing insertion sort definitions
 theorem exercise01 (f : α → c) (a : α) :
@@ -131,40 +128,23 @@ theorem insertionSort_eq_mathlib (map : α -> c) (l : List α) :
       exact orderedInsert_eq_mathlib map a _
 
 
--- post condition 2: sortedness, input list and output sorted
+-- Sortedness via Mathlib's Pairwise insertion-sort theorem
 theorem orderedInsert_sorted (f : α → c) (a : α) (l : List α)
     (h : SortedBy f l) :
     SortedBy f (orderedInsert f a l) := by
-      induction h with
-  | nil =>
-    rw [exercise01]
-    exact SortedBy.single a
-  | single x =>
-    by_cases h1 : f a ≤ f x
-    · rw [exercise02 f a x [] h1]
-      exact SortedBy.cons a x [] h1 (SortedBy.single x)
-    · rw [exercise03 f a x [] h1, exercise01]
-      exact SortedBy.cons x a [] (le_of_lt (not_le.mp h1)) (SortedBy.single a)
-  | cons x y l hxy hyl ih =>
-    by_cases h1 : f a ≤ f x
-    · rw [exercise02 f a x (y :: l) h1]
-      exact SortedBy.cons a x (y :: l) h1 (SortedBy.cons x y l hxy hyl)
-    · rw [exercise03 f a x (y :: l) h1]
-      by_cases h2 : f a ≤ f y
-      · rw [exercise02 f a y l h2]
-        exact SortedBy.cons x a (y :: l) (le_of_lt (not_le.mp h1))
-          (SortedBy.cons a y l h2 hyl)
-      · rw [exercise03 f a y l h2] at ih ⊢
-        exact SortedBy.cons x y _ hxy ih
+  let r : α → α → Prop := fun x y => f x ≤ f y
+  haveI : Std.Total r := ⟨fun x y => le_total (f x) (f y)⟩
+  haveI : IsTrans α r := ⟨fun _ _ _ hxy hyz => le_trans hxy hyz⟩
+  change List.Pairwise r (orderedInsert f a l)
+  rw [orderedInsert_eq_mathlib]
+  exact List.Pairwise.orderedInsert (r := r) a l h
 
 theorem insertionSort_sorted (f : α → c) (l : List α) :
     SortedBy f (insertionSort f l) := by
-  induction l with
-  | nil =>
-    rw [exercise04]
-    exact SortedBy.nil
-  | cons a rest ih =>
-    rw [exercise05]
-    exact orderedInsert_sorted f a (insertionSort f rest) ih
+  let r : α → α → Prop := fun x y => f x ≤ f y
+  haveI : Std.Total r := ⟨fun x y => le_total (f x) (f y)⟩
+  haveI : IsTrans α r := ⟨fun _ _ _ hxy hyz => le_trans hxy hyz⟩
+  rw [insertionSort_eq_mathlib]
+  exact List.pairwise_insertionSort r l
 
   -- stability next

@@ -1,5 +1,4 @@
 import Mathlib
-import Mathlib.Order.Lattice
 
 /-!
 # Insertion sort
@@ -9,7 +8,6 @@ import Mathlib.Order.Lattice
 variable {α c : Type} [LinearOrder c]
 
 -- namespace Proj
-
 
 def orderedInsert (map : α -> c) (a : α) : List α -> List α
   | [] => [a]
@@ -68,7 +66,7 @@ inductive SortedBy (f : α → c) : List α → Prop
   | cons (x y : α) (l : List α) :
     f x ≤ f y → SortedBy f (y :: l) → SortedBy f (x :: y :: l)
 
--- proving trivial facts using sorting defns set up so far
+-- stress testing insertion sort definitions
 theorem exercise01 (f : α → c) (a : α) :
     orderedInsert f a [] = [a] := by
   rfl
@@ -91,6 +89,8 @@ theorem exercise05 (f : α → c) (a : α) (rest : List α) :
     insertionSort f (a :: rest) = orderedInsert f a (insertionSort f rest) := by
   rfl
 
+
+-- post condition 1a: no items added or lost
 theorem orderedInsert_perm (f : α → c) (a : α) (l : List α) :
     (orderedInsert f a l).Perm (a :: l) := by
   induction l with
@@ -102,6 +102,7 @@ theorem orderedInsert_perm (f : α → c) (a : α) (l : List α) :
     · rw [exercise03 f a b rest h]
       exact (List.Perm.cons b ih).trans (List.Perm.swap a b rest)
 
+-- post condition 1b:
 theorem insertionSort_perm (f : α → c) (l : List α) :
     (insertionSort f l).Perm l := by
   induction l with
@@ -112,6 +113,25 @@ theorem insertionSort_perm (f : α → c) (l : List α) :
     exact (orderedInsert_perm f a (insertionSort f rest)).trans (List.Perm.cons a ih)
 
 
+-- post condition 2: compare with mathlib implementation of ordered insert
+theorem orderedInsert_eq_mathlib (map : α → c) (a : α) (l : List α) :
+    orderedInsert map a l = List.orderedInsert (fun x y => map x ≤ map y) a l := by
+  induction l with
+  | nil => rfl
+  | cons a rest ih => rw[orderedInsert, List.orderedInsert, ih]
+
+-- post condition 2b: compare with mathlib implementation of insertion sort
+theorem insertionSort_eq_mathlib (map : α -> c) (l : List α) :
+    insertionSort map l = List.insertionSort (fun x y => map x ≤ map y) l := by
+  induction l with
+  | nil => rfl
+  | cons a rest ih =>
+      rw [insertionSort, List.insertionSort, List.foldr_cons, ih]
+      rw [← List.insertionSort]
+      exact orderedInsert_eq_mathlib map a _
+
+
+-- post condition 2: sortedness, input list and output sorted
 theorem orderedInsert_sorted (f : α → c) (a : α) (l : List α)
     (h : SortedBy f l) :
     SortedBy f (orderedInsert f a l) := by
@@ -148,5 +168,3 @@ theorem insertionSort_sorted (f : α → c) (l : List α) :
     exact orderedInsert_sorted f a (insertionSort f rest) ih
 
   -- stability next
-
-#min_imports

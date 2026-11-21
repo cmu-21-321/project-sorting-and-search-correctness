@@ -127,24 +127,36 @@ theorem insertionSort_eq_mathlib (map : α -> c) (l : List α) :
       rw [← List.insertionSort]
       exact orderedInsert_eq_mathlib map a _
 
-
 -- Sortedness via Mathlib's Pairwise insertion-sort theorem
 theorem orderedInsert_sorted (f : α → c) (a : α) (l : List α)
     (h : SortedBy f l) :
     SortedBy f (orderedInsert f a l) := by
   let r : α → α → Prop := fun x y => f x ≤ f y
-  haveI : Std.Total r := ⟨fun x y => le_total (f x) (f y)⟩
-  haveI : IsTrans α r := ⟨fun _ _ _ hxy hyz => le_trans hxy hyz⟩
+  have htotal : Std.Total r := by
+    constructor
+    intro x y
+    exact le_total (f x) (f y)
+  have htrans : IsTrans α r := by
+    constructor
+    intro x y z hxy hyz
+    exact le_trans hxy hyz
   change List.Pairwise r (orderedInsert f a l)
   rw [orderedInsert_eq_mathlib]
-  exact List.Pairwise.orderedInsert (r := r) a l h
+  exact @List.Pairwise.orderedInsert α r inferInstance htotal htrans a l h
 
 theorem insertionSort_sorted (f : α → c) (l : List α) :
     SortedBy f (insertionSort f l) := by
+  -- Define linear order function with Mathlib's type specification
   let r : α → α → Prop := fun x y => f x ≤ f y
-  haveI : Std.Total r := ⟨fun x y => le_total (f x) (f y)⟩
-  haveI : IsTrans α r := ⟨fun _ _ _ hxy hyz => le_trans hxy hyz⟩
+  -- Lemma: for any x y either r x y or r y x (any two elements can be compared)
+  have htotal : Std.Total r := by
+    constructor
+    intro x y
+    exact le_total (f x) (f y)
+  -- Lemma: if f x ≤ f y and f y ≤ f z, then f x ≤ f z
+  have htrans : IsTrans α r := by
+    constructor
+    intro x y z hxy hyz
+    exact le_trans hxy hyz
   rw [insertionSort_eq_mathlib]
-  exact List.pairwise_insertionSort r l
-
-  -- stability next
+  exact @List.pairwise_insertionSort α r inferInstance htotal htrans l

@@ -7,8 +7,6 @@ import Mathlib
 -- Guarantees total ordering, every two elements are comparable
 variable {α c : Type} [LinearOrder c]
 
--- namespace Proj
-
 def orderedInsert (map : α -> c) (a : α) : List α -> List α
   | [] => [a]
   | b::rest => if (map a) ≤ (map b) then a::b::rest
@@ -18,11 +16,7 @@ def insertionSort (map : α -> c) : List α -> List α
   | [] => []
   | a::rest => orderedInsert map a (insertionSort map rest)
 
--- end Proj
-
-
 -- test case
-
 structure Student where
   name : String
   grade : ℕ
@@ -56,9 +50,6 @@ def checkSorted (f : α → c) : List α → Bool
 #eval checkSorted Student.stID ([] : List Student)
 -- should be true
 
--- precondition and postcondition
-
--- precondition set up
 -- redundant with checkSorted, will determine which one to develop further next week
 def SortedBy (f : α → c) (l : List α) : Prop :=
   List.Pairwise (fun x y => f x ≤ f y) l
@@ -109,8 +100,7 @@ theorem insertionSort_perm (f : α → c) (l : List α) :
     rw [exercise05]
     exact (orderedInsert_perm f a (insertionSort f rest)).trans (List.Perm.cons a ih)
 
-
--- post condition 2: compare with mathlib implementation of ordered insert
+-- post condition 2a: compare with mathlib implementation of ordered insert
 theorem orderedInsert_eq_mathlib (map : α → c) (a : α) (l : List α) :
     orderedInsert map a l = List.orderedInsert (fun x y => map x ≤ map y) a l := by
   induction l with
@@ -160,3 +150,34 @@ theorem insertionSort_sorted (f : α → c) (l : List α) :
     exact le_trans hxy hyz
   rw [insertionSort_eq_mathlib]
   exact @List.pairwise_insertionSort α r inferInstance htotal htrans l
+
+-- stability theorems
+theorem orderedInsert_stability (f : α → c) (a : α)
+    (l : List α) (k : c) :
+    (orderedInsert f a l).filter (fun x => f x = k) =
+      if f a = k then
+        a :: l.filter (fun x => f x = k)
+      else
+        l.filter (fun x => f x = k) := by
+  induction l with
+  | nil =>
+      -- What does orderedInsert f a [] reduce to?
+      rw[List.filter, orderedInsert, List.filter, List.filter]
+      by_cases h : f a = k
+      · simp [h]
+      · simp [h]
+  | cons b rest ih =>
+      sorry
+
+theorem insertionSort_stability (f : α → c) (l : List α) :
+    ∀ k : c,
+      (insertionSort f l).filter (fun x => f x = k) =
+        l.filter (fun x => f x = k) := by
+  induction l with
+  | nil =>
+      intro k
+      rfl
+  | cons a rest ih =>
+      intro k
+      rw [insertionSort, orderedInsert_stability, ih k]
+      by_cases h : f a = k <;> simp [h]

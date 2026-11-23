@@ -7,8 +7,6 @@ import Mathlib
 -- Guarantees total ordering, every two elements are comparable
 variable {α c : Type} [LinearOrder c]
 
--- namespace Proj
-
 def orderedInsert (map : α -> c) (a : α) : List α -> List α
   | [] => [a]
   | b::rest => if (map a) ≤ (map b) then a::b::rest
@@ -18,11 +16,7 @@ def insertionSort (map : α -> c) : List α -> List α
   | [] => []
   | a::rest => orderedInsert map a (insertionSort map rest)
 
--- end Proj
-
-
 -- test case
-
 structure Student where
   name : String
   grade : ℕ
@@ -56,9 +50,6 @@ def checkSorted (f : α → c) : List α → Bool
 #eval checkSorted Student.stID ([] : List Student)
 -- should be true
 
--- precondition and postcondition
-
--- precondition set up
 -- redundant with checkSorted, will determine which one to develop further next week
 def SortedBy (f : α → c) (l : List α) : Prop :=
   List.Pairwise (fun x y => f x ≤ f y) l
@@ -109,8 +100,7 @@ theorem insertionSort_perm (f : α → c) (l : List α) :
     rw [exercise05]
     exact (orderedInsert_perm f a (insertionSort f rest)).trans (List.Perm.cons a ih)
 
-
--- post condition 2: compare with mathlib implementation of ordered insert
+-- post condition 2a: compare with mathlib implementation of ordered insert
 theorem orderedInsert_eq_mathlib (map : α → c) (a : α) (l : List α) :
     orderedInsert map a l = List.orderedInsert (fun x y => map x ≤ map y) a l := by
   induction l with
@@ -127,24 +117,67 @@ theorem insertionSort_eq_mathlib (map : α -> c) (l : List α) :
       rw [← List.insertionSort]
       exact orderedInsert_eq_mathlib map a _
 
-
 -- Sortedness via Mathlib's Pairwise insertion-sort theorem
 theorem orderedInsert_sorted (f : α → c) (a : α) (l : List α)
     (h : SortedBy f l) :
     SortedBy f (orderedInsert f a l) := by
   let r : α → α → Prop := fun x y => f x ≤ f y
-  haveI : Std.Total r := ⟨fun x y => le_total (f x) (f y)⟩
-  haveI : IsTrans α r := ⟨fun _ _ _ hxy hyz => le_trans hxy hyz⟩
+  have htotal : Std.Total r := by
+    constructor
+    intro x y
+    exact le_total (f x) (f y)
+  have htrans : IsTrans α r := by
+    constructor
+    intro x y z hxy hyz
+    exact le_trans hxy hyz
   change List.Pairwise r (orderedInsert f a l)
   rw [orderedInsert_eq_mathlib]
-  exact List.Pairwise.orderedInsert (r := r) a l h
+  exact @List.Pairwise.orderedInsert α r inferInstance htotal htrans a l h
 
 theorem insertionSort_sorted (f : α → c) (l : List α) :
     SortedBy f (insertionSort f l) := by
+  -- Define linear order function with Mathlib's type specification
   let r : α → α → Prop := fun x y => f x ≤ f y
-  haveI : Std.Total r := ⟨fun x y => le_total (f x) (f y)⟩
-  haveI : IsTrans α r := ⟨fun _ _ _ hxy hyz => le_trans hxy hyz⟩
+  -- Lemma: for any x y either r x y or r y x (any two elements can be compared)
+  have htotal : Std.Total r := by
+    constructor
+    intro x y
+    exact le_total (f x) (f y)
+  -- Lemma: if f x ≤ f y and f y ≤ f z, then f x ≤ f z
+  have htrans : IsTrans α r := by
+    constructor
+    intro x y z hxy hyz
+    exact le_trans hxy hyz
   rw [insertionSort_eq_mathlib]
-  exact List.pairwise_insertionSort r l
+  exact @List.pairwise_insertionSort α r inferInstance htotal htrans l
 
-  -- stability next
+-- stability theorems
+theorem orderedInsert_stability (f : α → c) (a : α)
+    (l : List α) (k : c) :
+    (orderedInsert f a l).filter (fun x => f x = k) =
+      if f a = k then
+        a :: l.filter (fun x => f x = k)
+      else
+        l.filter (fun x => f x = k) := by
+  induction l with
+  | nil =>
+      -- What does orderedInsert f a [] reduce to?
+      rw[List.filter, orderedInsert, List.filter, List.filter]
+      by_cases h : f a = k
+      · simp [h]
+      · simp [h]
+  | cons b rest ih =>
+      sorry
+
+theorem insertionSort_stability (f : α → c) (l : List α) :
+    ∀ k : c,
+      (insertionSort f l).filter (fun x => f x = k) =
+        l.filter (fun x => f x = k) := by
+  induction l with
+  | nil =>
+      intro k
+      rfl
+  | cons a rest ih =>
+      intro k
+      rw [insertionSort, orderedInsert_stability, ih k]
+      by_cases h : f a = k <;> simp [h]

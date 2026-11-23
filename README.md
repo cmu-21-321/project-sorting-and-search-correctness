@@ -20,6 +20,8 @@ All of these are written from scratch rather than taken from a library.
   It looks at the middle element and either returns its index or recurses on the left or
   right half. It terminates because `hi - lo` gets smaller on every call.
 - `binarySearch l x` runs `bsearchGo` on the whole list (from `0` to `l.length`).
+- `orderedInsert map a l` inserts element `a` into an already sorted list `l`, maintaining sorted order according to `map`. It compares `map a` with the first element's mapped value and either inserts `a` before it or recursively searches the rest of the list.
+- `insertionSort map l` sorts a list using insertion sort. It recursively sorts the tail of the list, then inserts the head into the sorted result using orderedInsert. The map argument determines which field/property is used to sort the list (e.g., student ID, name, or grade).
 
 ### What we proved
 
@@ -28,6 +30,15 @@ All of these are written from scratch rather than taken from a library.
 | `binarySearch_sound` | If binary search returns `some i`, then index `i` really holds `x`. This holds for any list, sorted or not. |
 | `binarySearch_complete` | On a sorted list, if `x` is in the list, binary search finds it. |
 | `binarySearch_eq_none_iff` | On a sorted list, binary search returns `none` exactly when `x` is not in the list. |
+| `orderedInsert_perm` | Inserting an element preserves all elements (no additions or losses). |
+| `insertionSort_perm` | Insertion sort preserves all elements of the original list. |
+| `orderedInsert_eq_mathlib` | Establish `orderedInsert` equivalence to Mathlib's implementation. |
+| `insertionSort_eq_mathlib` | Establish `insertionSort` equivalence to Mathlib's implementation. |
+| `orderedInsert_sorted` | Inserting into a sorted list preserves sortedness. |
+| `insertionSort_sorted` | Insertion sort always produces a sorted list. |
+| `orderedInsert_stability` | Inserting an element preserves the relative order of elements with equal keys. |
+| `insertionSort_stability` | Elements with equal keys retain their original relative order after sorting. |
+
 
 ### How the proofs work
 

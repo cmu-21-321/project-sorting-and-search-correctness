@@ -1,6 +1,6 @@
 # Sorting and Search Correctness
 
-We define insertion sort and merge sort, prove both return a sorted permutation of the input,
+We define insertion sort, prove it returns a sorted permutation of the input,
 prove stability, and prove binary search correct on sorted lists.
 
 ## Binary search
@@ -16,10 +16,10 @@ All of these are written from scratch rather than taken from a library.
   `x :: y :: rest` is sorted when `x ≤ y` and `y :: rest` is sorted.
 - `nth l i : Option Nat` returns the element at index `i`, or `none` if `i` is out of range.
 - `Contains l x` means `x` appears in `l`, stated as `∃ i, nth l i = some x`.
-- `bsearchGo l target lo hi` searches the indices from `lo` up to (but not including) `hi`.
-  It looks at the middle element and either returns its index or recurses on the left or
+- `bsearchGo l target lo hi` searches the indices from `lo` to `hi` (inclusive).
+  It looks at the middle element and either returns it or recurses on the left or
   right half. It terminates because `hi - lo` gets smaller on every call.
-- `binarySearch l x` runs `bsearchGo` on the whole list (from `0` to `l.length`).
+- `binarySearch l x` runs `bsearchGo` on the whole list (from `0` to `l.length - 1`).
 - `orderedInsert map a l` inserts element `a` into an already sorted list `l`, maintaining sorted order according to `map`. It compares `map a` with the first element's mapped value and either inserts `a` before it or recursively searches the rest of the list.
 - `insertionSort map l` sorts a list using insertion sort. It recursively sorts the tail of the list, then inserts the head into the sorted result using orderedInsert. The map argument determines which field/property is used to sort the list (e.g., student ID, name, or grade).
 
@@ -27,9 +27,9 @@ All of these are written from scratch rather than taken from a library.
 
 | Theorem | Meaning |
 |---|---|
-| `binarySearch_sound` | If binary search returns `some i`, then index `i` really holds `x`. This holds for any list, sorted or not. |
+| `binarySearch_sound` | If binary search returns `some a`, then `a = x` and `x` is in the list. This holds for any list, sorted or not. |
 | `binarySearch_complete` | On a sorted list, if `x` is in the list, binary search finds it. |
-| `binarySearch_eq_none_iff` | On a sorted list, binary search returns `none` exactly when `x` is not in the list. |
+| `binSearch_eq` | Binary search returns the same result as Lean core's `Array.binSearch` on every list. |
 | `orderedInsert_perm` | Inserting an element preserves all elements (no additions or losses). |
 | `insertionSort_perm` | Insertion sort preserves all elements of the original list. |
 | `orderedInsert_eq_mathlib` | Establish `orderedInsert` equivalence to Mathlib's implementation. |
@@ -42,24 +42,23 @@ All of these are written from scratch rather than taken from a library.
 
 ### How the proofs work
 
-- **Soundness:** the function only returns `some mid` right after checking that the middle
-  element equals the target, so whatever it returns is correct. The proof is induction that
-  follows the branches of `bsearchGo` (`fun_induction`).
+- **Soundness:** the function only returns the middle element after checking that it is
+  neither smaller nor larger than the target, so whatever it returns is correct. The proof is
+  induction that follows the branches of `bsearchGo` (`fun_induction`).
 - **Completeness:** the key fact is `Sorted.nth_le_nth`: in a sorted list, an earlier index
   holds a value less than or equal to a later index. The main lemma, `bsearchGo_complete`, keeps
   the invariant "if `x` is in the list, it is somewhere between `lo` and `hi`." When the target
   is smaller than the middle element, `Sorted.nth_le_nth` shows it cannot be in the right half,
   so searching only the left half loses nothing (and the same for the other side).
-- **Absent case:** if `x` is not in the list, binary search cannot return `some i`, because
-  soundness would then show `x` is at index `i`. Together with completeness this gives
-  `binarySearch_eq_none_iff`.
-- Two small helper lemmas, `nth_lt_length` and `nth_of_lt_length`, connect `nth` to
+- **Equivalence:** `bsearchGo` follows the same branches as core's `Array.binSearchAux`, so
+  `binSearchAux_eq` matches the two functions case by case, and `binSearch_eq` follows.
+- Two small helper lemmas, `nth_lt_length` and `nth_eq_getElem`, connect `nth` to
   `l.length`. They are used to show the search always looks at a real index.
 
 ### Tests
 
-`#eval` tests in the same file cover the empty list, a one-element list (found and not found),
-the target at the first, middle and last position, and an even-length list.
+`#eval` tests in the same file cover the empty list, a one-element list (not found),
+an odd-length list and an even-length list.
 
 ## Prerequisites
 
